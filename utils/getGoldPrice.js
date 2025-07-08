@@ -1,0 +1,1 @@
+goldPrice = 70;
