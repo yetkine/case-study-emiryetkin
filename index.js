@@ -5,10 +5,10 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
-require("dotenv").config(); // .env dosyasını okur
 
 const app = express();
-const PORT = 3001;
+// Heroku PORT’u yoksa 3001 kullan
+const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 
@@ -39,7 +39,7 @@ app.get("/products", async (req, res) => {
     );
     const products = JSON.parse(rawData);
 
-    // Fiyat hesapla
+    // Fiyat ve 5 üzerinden puan hesapla
     const updatedProducts = products.map((product) => {
       const price = (
         (product.popularityScore + 1) *
@@ -63,5 +63,5 @@ app.get("/products", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Backend server is running on http://localhost:${PORT}`);
+  console.log(`✅ Backend server is running on port ${PORT}`);
 });
