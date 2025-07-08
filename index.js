@@ -7,14 +7,15 @@ const path = require("path");
 const axios = require("axios");
 
 const app = express();
-// Heroku PORT’u yoksa 3001 kullan
+
+// Heroku’nun verdiği PORT’u al, yoksa 3001 kullan
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 
 app.get("/products", async (req, res) => {
   try {
-    // Altın fiyatını al
+    // GoldAPI’dan gerçek zamanlı gram fiyatı çekiyoruz
     const goldApiResponse = await axios.get(
       "https://www.goldapi.io/api/XAU/USD",
       {
@@ -25,43 +26,33 @@ app.get("/products", async (req, res) => {
       }
     );
 
-    const goldPrice = goldApiResponse.data.price_gram_24k; // USD per gram
+    const goldPrice = goldApiResponse.data.price_gram_24k; // USD/gram
 
     if (!goldPrice) {
-      return res
-        .status(500)
-        .json({ error: "Gold price not available from API" });
+      return res.status(500).json({ error: "Gold price not available" });
     }
 
-    // Ürünleri oku
-    const rawData = fs.readFileSync(
-      path.join(__dirname, "data", "products.json")
-    );
-    const products = JSON.parse(rawData);
+    // products.json dosyasını oku
+    const raw = fs.readFileSync(path.join(__dirname, "data", "products.json"));
+    const products = JSON.parse(raw);
 
-    // Fiyat ve 5 üzerinden puan hesapla
-    const updatedProducts = products.map((product) => {
-      const price = (
-        (product.popularityScore + 1) *
-        product.weight *
-        goldPrice
-      ).toFixed(2);
+    // Her ürünün fiyatını ve 5’lik popülerlik derecesini hesapla
+    const updated = products.map((p) => {
+      const price = ((p.popularityScore + 1) * p.weight * goldPrice).toFixed(2);
       return {
-        ...product,
+        ...p,
         price: parseFloat(price),
-        popularityScoreOutOf5: parseFloat(
-          (product.popularityScore * 5).toFixed(1)
-        ),
+        popularityScoreOutOf5: parseFloat((p.popularityScore * 5).toFixed(1)),
       };
     });
 
-    res.json(updatedProducts);
+    res.json(updated);
   } catch (err) {
-    console.error("Error fetching gold price or processing data:", err);
+    console.error("Error fetching products:", err.response?.data || err);
     res.status(500).json({ error: "Server error while fetching products" });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Backend server is running on port ${PORT}`);
+  console.log(`✅ Backend listening on port ${PORT}`);
 });
